@@ -1,77 +1,100 @@
 
-// include the library code:
+// Load lcd library and initialize with the numbers of the interface pins
 #include <LiquidCrystal.h>
-
-// initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(12, 11, 7, 6, 5, 4);
 
-// char arrays
-char lcd_line_1[20];
-char lcd_line_1_prev[20];
+// Constants
+const int screen_refresh_interval_ms = 500;
+const int pulse_length_ms = 10+40; // Actual pulse length 10 ms, 40 ms for safety margin (pulses come every 350 ms)
+const int channel_1 = 2; // Channel for peak positions (black)
+const int channel_2 = 3; // Channel for bit information at peak positions (brown)
+const bool use_serial_for_debugging = true;
 
-
-int channel_1 = 2; // Channel for peak positions (black)
-int channel_2 = 3; // Channel for bit information at peak positions (brown)
+// Volatile variables used in the interrupt
 volatile unsigned int pulses;
-volatile unsigned int counter = 0;
+volatile unsigned int counter;
 volatile char input_signal[100];
+volatile unsigned long last_interrupt_time;
+
+// Global variables (arrays defined here to speed up the code)
+char lcd_line_1[20];
+char prev_lcd_line_1[20];
 char depth[5];
 char prev_depth[5] = "--.-";
-char* input_signal_print;
 bool signal_reread = false;
-volatile unsigned long last_interrupt_time;
-const int pulse_length_millis = 10+40; // Actual pulse length 10 ms, 40 ms for safety margin (pulses come every 350 ms)
- 
-void setup() 
+
+
+// Setup code, to run once in the beginning
+void setup()
 {
-  Serial.begin(9600); 
-   
+  if(use_serial_for_debugging)
+    Serial.begin(9600);
+
   pinMode(channel_1, INPUT);
   pinMode(channel_2, INPUT);
-  attachInterrupt(digitalPinToInterrupt(channel_1), count_pulse, RISING); 
+  attachInterrupt(digitalPinToInterrupt(channel_1), read_pulse, RISING);
 
   // set up the number of columns and rows on the LCD
   lcd.begin(16, 2);
 }
- 
-void loop() 
-{ 
+
+
+// Main loop, to run repeatedly
+void loop()
+{
   pulses = 0;
   counter = 0;
   last_interrupt_time = millis();
-  interrupts(); 
-  delay(500); 
+
+  // Activate interrupts
+  interrupts();
+  // Wait for the screen refresh interval
+  delay(screen_refresh_interval_ms);
+  // Disable interrupts while updating screen and printing to serial
   noInterrupts();
 
+  // The input signal read in the interrupt is stored in input_signal variable
   input_signal[counter] = '\0';
-  input_signal_print = input_signal;
-  convert_binary_signal_to_depth();
-   
-  Serial.print("Pulses per second: "); 
-  Serial.println(pulses);
-  Serial.print("Number of bits in the first full pulse: "); 
-  Serial.println(counter);
-  Serial.print("Bits: "); 
-  Serial.println(input_signal_print);
-  Serial.print("Depth: "); 
-  Serial.println(depth);
-  Serial.println();
+  // Convert binary interrupt signal to depth string stored in depth variable
+  convert_binary_signal_to_depth((char*)input_signal);
 
-  
+  // Print debugging information if enabled
+  if(use_serial_for_debugging) {
+    Serial.print("Pulses per second: ");
+    Serial.println(pulses);
+    Serial.print("Number of bits in the first full pulse: ");
+    Serial.println(counter);
+    Serial.print("Bits: ");
+    Serial.println((char*)input_signal);
+    Serial.print("Depth: ");
+    Serial.println(depth);
+    Serial.println();
+  }
+
+  // Check if the signal is correct, if not then reread before updating the screen
   if(check_signal() == false) {
     if(signal_reread == true) {
+      // Signal has been reread already and still not correct --> display dashes
       strncpy(depth, "--.-", 5);
     } else {
+      // Signal not reread yet, keep previous depth value and try rereading
       strncpy(depth, prev_depth, 5);
     }
-    signal_reread = !signal_reread;    
+    signal_reread = !signal_reread;
   } else {
+    // Reset signal_reread flag after succesful signal reading
     signal_reread = false;
   }
+
+  // Update lcd with the value stored in depth variable
   update_lcd();
+  // Save depth variable so missing decimal character can be detected
+  // (sometimes decimal character is not transmitted correctly)
   strncpy(prev_depth, depth, 5);
 }
 
+
+// Check depth value correctness
 bool check_signal() {
   if(strcmp(depth, "   ") == 0)
     return false;
@@ -87,11 +110,13 @@ bool check_signal() {
 
   return true;
 }
- 
-void count_pulse() 
+
+
+// Function used in the interrupt to convert signals to bits
+void read_pulse()
 {
   // Check if new pulse is coming
-  if(millis() - last_interrupt_time > pulse_length_millis) {    
+  if(millis() - last_interrupt_time > pulse_length_ms) {
     pulses++;
   }
   // Measure first full pulse
@@ -101,31 +126,32 @@ void count_pulse()
     } else {
       input_signal[counter] = '0';
     }
-     
     counter++;
   }
-  
   last_interrupt_time = millis();
 }
 
 
+// Update lcd screen with the value stored in depth variable
+// prev_lcd_line_1 is used to update screen only if there is a change (prevents blinking)
 void update_lcd() {
   snprintf(lcd_line_1, 20, "Depth: %s m", depth);
 
   // Update screen only if there has been a change
-  if(strcmp(lcd_line_1, lcd_line_1_prev) != 0) {
+  if(strcmp(lcd_line_1, prev_lcd_line_1) != 0) {
     // clean up the screen before printing a new reply
     lcd.clear();
     // set the cursor to column 0, line 0
     lcd.setCursor(0, 0);
     // print line 1
-    lcd.print(lcd_line_1); 
+    lcd.print(lcd_line_1);
   }
-  strncpy(lcd_line_1_prev, lcd_line_1, 20);
+  strncpy(prev_lcd_line_1, lcd_line_1, 20);
 }
 
 
-void convert_binary_signal_to_depth() {
+// Convert binary signal to depth string
+void convert_binary_signal_to_depth(char* input_signal_print) {
   // Read digits (left to right) from input signal
   byte pos = 0;
   depth[pos++] = convert_7bits_to_char(&input_signal_print[counter-7]);
@@ -133,12 +159,13 @@ void convert_binary_signal_to_depth() {
   // Check if decimal point is present
   if(input_signal_print[counter-23] == '1') {
     depth[pos++] = '.';
-  }  
+  }
   depth[pos++] = convert_7bits_to_char(&input_signal_print[counter-21]);
   depth[pos++] = '\0';
 }
 
 
+// Convert 7 bits first to a byte and then to a corresponding char
 char convert_7bits_to_char(char* bits) {
   byte digit = 0;
 
@@ -151,6 +178,7 @@ char convert_7bits_to_char(char* bits) {
 }
 
 
+// Convert byte to a corresponding char
 char convert_byte_to_char(byte depth) {
   if(depth == B1100000) {
     return '1';
