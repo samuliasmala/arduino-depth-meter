@@ -1,14 +1,14 @@
 
 // Load lcd library and initialize with the numbers of the interface pins
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(12, 11, 7, 6, 5, 4);
+LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
 
 // Constants
 const int screen_refresh_interval_ms = 500;
 const int pulse_length_ms = 10+40; // Actual pulse length 10 ms, 40 ms for safety margin (pulses come every 350 ms)
 const int channel_1 = 2; // Channel for peak positions (black)
-const int channel_2 = 3; // Channel for bit information at peak positions (brown)
-const bool use_serial_for_debugging = true;
+const int channel_2 = 13; // Channel for bit information at peak positions (brown)
+const bool use_serial_for_debugging = false;
 
 // Volatile variables used in the interrupt
 volatile unsigned int pulses;
