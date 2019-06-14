@@ -9,15 +9,15 @@ const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 13; // Channel for bit information at peak positions (brown)
 const bool use_serial_for_debugging = true;
+const int max_signal_read_retries = 3;
 
 // Volatile variables used in the interrupt
-volatile bool start_reading_pulse;
-volatile unsigned int counter;
+volatile unsigned int bits_read;
 volatile char input_signal[max_pulse_bits + 1]; // +1 to allow space for \0
 volatile unsigned long last_interrupt_time;
-volatile bool pulse_read;
 
 // Global variables (arrays defined here to speed up the code)
+int unsuccessful_signal_reads = 0;
 char lcd_line_1[20];
 char prev_lcd_line_1[20];
 char depth[5];
@@ -42,7 +42,8 @@ void setup()
 // Main loop, to run repeatedly
 void loop()
 {
-  counter = 0;
+  // Reset variables for the next pulse
+  bits_read = 0;
   last_interrupt_time = millis();
 
   // Activate interrupts
@@ -50,7 +51,7 @@ void loop()
   
   // Wait until a single pulse is read, i.e. more than pulse_length_ms since
   // last interrupt
-  while(counter == 0 || millis() - last_interrupt_time < pulse_length_ms) {
+  while(bits_read == 0 || millis() - last_interrupt_time < pulse_length_ms) {
     delay(pulse_length_ms);
   }
 
@@ -58,7 +59,7 @@ void loop()
   noInterrupts();
 
   // Check that maximum bits allowed for pulse is not exceeded
-  if(counter >= max_pulse_bits) {
+  if(bits_read >= max_pulse_bits) {
     print_debugging_information(false);
     return;
   }
@@ -66,7 +67,7 @@ void loop()
   
   // The input signal read in the interrupt is stored in input_signal variable
   // Add end-of-string character
-  input_signal[counter] = '\0';
+  input_signal[bits_read] = '\0';
   
   // Convert binary interrupt signal to depth string stored in depth variable
   convert_binary_signal_to_depth((char*)input_signal);
@@ -74,24 +75,24 @@ void loop()
   print_debugging_information(true);
   
   // Check if the signal is correct, if not then reread before updating the screen
-  if(check_signal() == false) {
-    if(signal_reread == true) {
-      // Signal has been reread already and still not correct --> display dashes
+  if(check_signal()) {
+    unsuccessful_signal_reads = 0;
+  } else {
+    unsuccessful_signal_reads++;
+    
+    if(unsuccessful_signal_reads > max_signal_read_retries) {
+      // Signal has been reread max number of times and still not correct --> display dashes
       strncpy(depth, "--.-", 5);
     } else {
-      // Signal not reread yet, keep previous depth value and try rereading
+      // Signal not reread max number of times yet, keep previous depth value and try rereading
       strncpy(depth, prev_depth, 5);
     }
-    signal_reread = !signal_reread;
-  } else {
-    // Reset signal_reread flag after succesful signal reading
-    signal_reread = false;
   }
 
   // Update lcd with the value stored in depth variable
   update_lcd();
-  // Save depth variable so missing decimal character can be detected
-  // (sometimes decimal character is not transmitted correctly)
+  
+  // Save depth variable so in case of unsuccessful signal read previous value can be displayed
   strncpy(prev_depth, depth, 5);
 }
 
@@ -100,12 +101,12 @@ void loop()
 void read_pulse()
 {
   if(digitalRead(channel_2) == HIGH) {
-    input_signal[counter] = '1';
+    input_signal[bits_read] = '1';
   } else {
-    input_signal[counter] = '0';
+    input_signal[bits_read] = '0';
   }
 
-  counter++;
+  bits_read++;
   last_interrupt_time = millis();
 }
 
@@ -116,7 +117,7 @@ void print_debugging_information(bool print_all) {
     return;
 
   Serial.print("Number of bits in the pulse: ");
-  Serial.println(counter);
+  Serial.println(bits_read);
 
   if(!print_all)
     return;
@@ -169,13 +170,13 @@ void update_lcd() {
 void convert_binary_signal_to_depth(char* input_signal_print) {
   // Read digits (left to right) from input signal
   byte pos = 0;
-  depth[pos++] = convert_7bits_to_char(&input_signal_print[counter-7]);
-  depth[pos++] = convert_7bits_to_char(&input_signal_print[counter-14]);
+  depth[pos++] = convert_7bits_to_char(&input_signal_print[bits_read-7]);
+  depth[pos++] = convert_7bits_to_char(&input_signal_print[bits_read-14]);
   // Check if decimal point is present
-  if(input_signal_print[counter-23] == '1') {
+  if(input_signal_print[bits_read-23] == '1') {
     depth[pos++] = '.';
   }
-  depth[pos++] = convert_7bits_to_char(&input_signal_print[counter-21]);
+  depth[pos++] = convert_7bits_to_char(&input_signal_print[bits_read-21]);
   depth[pos++] = '\0';
 }
 
