@@ -4,17 +4,18 @@
 LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
 
 // Constants
-const int screen_refresh_interval_ms = 500;
-const int pulse_length_ms = 10+40; // Actual pulse length 10 ms, 40 ms for safety margin (pulses come every 350 ms)
+const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
+const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 13; // Channel for bit information at peak positions (brown)
-const bool use_serial_for_debugging = false;
+const bool use_serial_for_debugging = true;
 
 // Volatile variables used in the interrupt
-volatile unsigned int pulses;
+volatile bool start_reading_pulse;
 volatile unsigned int counter;
-volatile char input_signal[100];
+volatile char input_signal[max_pulse_bits + 1]; // +1 to allow space for \0
 volatile unsigned long last_interrupt_time;
+volatile bool pulse_read;
 
 // Global variables (arrays defined here to speed up the code)
 char lcd_line_1[20];
@@ -22,7 +23,6 @@ char prev_lcd_line_1[20];
 char depth[5];
 char prev_depth[5] = "--.-";
 bool signal_reread = false;
-
 
 // Setup code, to run once in the beginning
 void setup()
@@ -42,35 +42,37 @@ void setup()
 // Main loop, to run repeatedly
 void loop()
 {
-  pulses = 0;
   counter = 0;
   last_interrupt_time = millis();
 
   // Activate interrupts
   interrupts();
-  // Wait for the screen refresh interval
-  delay(screen_refresh_interval_ms);
+  
+  // Wait until a single pulse is read, i.e. more than pulse_length_ms since
+  // last interrupt
+  while(counter == 0 || millis() - last_interrupt_time < pulse_length_ms) {
+    delay(pulse_length_ms);
+  }
+
   // Disable interrupts while updating screen and printing to serial
   noInterrupts();
 
+  // Check that maximum bits allowed for pulse is not exceeded
+  if(counter >= max_pulse_bits) {
+    print_debugging_information(false);
+    return;
+  }
+
+  
   // The input signal read in the interrupt is stored in input_signal variable
+  // Add end-of-string character
   input_signal[counter] = '\0';
+  
   // Convert binary interrupt signal to depth string stored in depth variable
   convert_binary_signal_to_depth((char*)input_signal);
 
-  // Print debugging information if enabled
-  if(use_serial_for_debugging) {
-    Serial.print("Pulses per second: ");
-    Serial.println(pulses);
-    Serial.print("Number of bits in the first full pulse: ");
-    Serial.println(counter);
-    Serial.print("Bits: ");
-    Serial.println((char*)input_signal);
-    Serial.print("Depth: ");
-    Serial.println(depth);
-    Serial.println();
-  }
-
+  print_debugging_information(true);
+  
   // Check if the signal is correct, if not then reread before updating the screen
   if(check_signal() == false) {
     if(signal_reread == true) {
@@ -94,6 +96,39 @@ void loop()
 }
 
 
+// Function used in the interrupt to convert signals to bits
+void read_pulse()
+{
+  if(digitalRead(channel_2) == HIGH) {
+    input_signal[counter] = '1';
+  } else {
+    input_signal[counter] = '0';
+  }
+
+  counter++;
+  last_interrupt_time = millis();
+}
+
+
+void print_debugging_information(bool print_all) {
+  // Print debugging information only if enabled
+  if(!use_serial_for_debugging)
+    return;
+
+  Serial.print("Number of bits in the pulse: ");
+  Serial.println(counter);
+
+  if(!print_all)
+    return;
+
+  Serial.print("Bits: ");
+  Serial.println((char*)input_signal);
+  Serial.print("Depth: ");
+  Serial.println(depth);
+  Serial.println();
+}
+
+
 // Check depth value correctness
 bool check_signal() {
   if(strcmp(depth, "   ") == 0)
@@ -102,33 +137,13 @@ bool check_signal() {
   if(depth[0] == '-' || depth[1] == '-'  || depth[2] == '-'  || depth[3] == '-' )
     return false;
 
-  if(depth[2] == '.' && prev_depth[2] != '.')
+  /*if(depth[2] == '.' && prev_depth[2] != '.')
     return false;
 
   if(depth[2] != '.' && prev_depth[2] == '.')
     return false;
-
+*/
   return true;
-}
-
-
-// Function used in the interrupt to convert signals to bits
-void read_pulse()
-{
-  // Check if new pulse is coming
-  if(millis() - last_interrupt_time > pulse_length_ms) {
-    pulses++;
-  }
-  // Measure first full pulse
-  if(pulses == 1) {
-    if(digitalRead(channel_2) == HIGH) {
-      input_signal[counter] = '1';
-    } else {
-      input_signal[counter] = '0';
-    }
-    counter++;
-  }
-  last_interrupt_time = millis();
 }
 
 
