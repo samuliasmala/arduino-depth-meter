@@ -1,7 +1,12 @@
+// SCREEN TYPES
+// 1 = Starter Kit LCD 
+#define SCREEN_TYPE 1
 
-// Load lcd library and initialize with the numbers of the interface pins
-#include <LiquidCrystal.h>
-LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
+#if SCREEN_TYPE == 1
+  // Load lcd library and initialize with the numbers of the interface pins
+  #include <LiquidCrystal.h>
+  LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
+#endif
 
 // Constants
 const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
@@ -18,8 +23,8 @@ volatile unsigned long last_interrupt_time;
 
 // Global variables (arrays defined here to speed up the code)
 int unsuccessful_signal_reads = 0;
-char lcd_line_1[20];
-char prev_lcd_line_1[20];
+char screen_content[20];
+char prev_screen_content[20];
 char depth[5];
 char prev_depth[5] = "--.-";
 bool signal_reread = false;
@@ -34,8 +39,7 @@ void setup()
   pinMode(channel_2, INPUT);
   attachInterrupt(digitalPinToInterrupt(channel_1), read_pulse, RISING);
 
-  // set up the number of columns and rows on the LCD
-  lcd.begin(16, 2);
+  initialize_screen();
 }
 
 
@@ -90,7 +94,7 @@ void loop()
   }
 
   // Update lcd with the value stored in depth variable
-  update_lcd();
+  update_screen();
   
   // Save depth variable so in case of unsuccessful signal read previous value can be displayed
   strncpy(prev_depth, depth, 5);
@@ -147,22 +151,28 @@ bool check_signal() {
   return true;
 }
 
-
-// Update lcd screen with the value stored in depth variable
-// prev_lcd_line_1 is used to update screen only if there is a change (prevents blinking)
-void update_lcd() {
-  snprintf(lcd_line_1, 20, "Depth: %s m", depth);
+void update_screen() {
+  snprintf(screen_content, 20, "Depth: %s m", depth);
 
   // Update screen only if there has been a change
-  if(strcmp(lcd_line_1, prev_lcd_line_1) != 0) {
-    // clean up the screen before printing a new reply
-    lcd.clear();
-    // set the cursor to column 0, line 0
-    lcd.setCursor(0, 0);
-    // print line 1
-    lcd.print(lcd_line_1);
+  if(strcmp(screen_content, prev_screen_content) != 0) {
+    #if SCREEN_TYPE == 1
+      update_lcd_screen();
+    #endif
   }
-  strncpy(prev_lcd_line_1, lcd_line_1, 20);
+  strncpy(prev_screen_content, screen_content, 20);
+}
+
+
+// Update lcd screen with the value stored in depth variable
+// prev_screen_content is used to update screen only if there is a change (prevents blinking)
+void update_lcd_screen() {
+  // clean up the screen before printing a new reply
+  lcd.clear();
+  // set the cursor to column 0, line 0
+  lcd.setCursor(0, 0);
+  // print line 1
+  lcd.print(screen_content);
 }
 
 
@@ -221,4 +231,12 @@ char convert_byte_to_char(byte depth) {
   } else {
     return '-';
   }
+}
+
+
+void initialize_screen() {
+  #if SCREEN_TYPE == 1
+    // set up the number of columns and rows on the LCD
+    lcd.begin(16, 2);
+  #endif
 }
