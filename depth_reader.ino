@@ -93,8 +93,9 @@ void loop()
     }
   }
 
-  // Update lcd with the value stored in depth variable
-  update_screen();
+  // Update lcd with the value stored in depth variable if depth change is not too quick
+  if(!too_fast_depth_change())
+    update_screen();
   
   // Save depth variable so in case of unsuccessful signal read previous value can be displayed
   strncpy(prev_depth, depth, 5);
@@ -142,14 +143,19 @@ bool check_signal() {
   if(depth[0] == '-' || depth[1] == '-'  || depth[2] == '-'  || depth[3] == '-' )
     return false;
 
-  /*if(depth[2] == '.' && prev_depth[2] != '.')
-    return false;
-
-  if(depth[2] != '.' && prev_depth[2] == '.')
-    return false;
-*/
   return true;
 }
+
+
+// Check if depth has changed too fast.  Often caused by missing decimal character
+// because sometimes decimal character is not transmitted correctly
+bool too_fast_depth_change() {
+  if(atof(depth) > 5*atof(prev_depth) || 5*atof(depth) < atof(prev_depth))
+    return true;
+  else
+    return false;
+}
+
 
 void update_screen() {
   snprintf(screen_content, 20, "Depth: %s m", depth);
