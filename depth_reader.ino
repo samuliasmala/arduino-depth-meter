@@ -9,12 +9,15 @@
 #endif
 
 // Constants
+const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
 const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
+const int max_wait_for_pulse_ms = 1000; // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 13; // Channel for bit information at peak positions (brown)
-const bool use_serial_for_debugging = true;
+const bool use_serial_for_debugging = false;
 const int max_signal_read_retries = 3;
+const char no_signal[] = " -- ";
 
 // Volatile variables used in the interrupt
 volatile unsigned int bits_read;
@@ -27,7 +30,7 @@ char screen_content[20];
 char prev_screen_content[20];
 char depth[5];
 char prev_depth[5] = "--.-";
-bool signal_reread = false;
+unsigned long last_screen_update;
 
 // Setup code, to run once in the beginning
 void setup()
@@ -55,7 +58,8 @@ void loop()
   
   // Wait until a single pulse is read, i.e. more than pulse_length_ms since
   // last interrupt
-  while(bits_read == 0 || millis() - last_interrupt_time < pulse_length_ms) {
+  while( (bits_read == 0 || millis() - last_interrupt_time < pulse_length_ms)
+        && millis() - last_interrupt_time < max_wait_for_pulse_ms) {
     delay(pulse_length_ms);
   }
 
@@ -86,7 +90,7 @@ void loop()
     
     if(unsuccessful_signal_reads > max_signal_read_retries) {
       // Signal has been reread max number of times and still not correct --> display dashes
-      strncpy(depth, "--.-", 5);
+      strncpy(depth, no_signal, 5);
     } else {
       // Signal not reread max number of times yet, keep previous depth value and try rereading
       strncpy(depth, prev_depth, 5);
@@ -129,8 +133,10 @@ void print_debugging_information(bool print_all) {
 
   Serial.print("Bits: ");
   Serial.println((char*)input_signal);
-  Serial.print("Depth: ");
-  Serial.println(depth);
+  Serial.print("Depth: '");
+  Serial.print(depth);
+  Serial.print("'");
+  Serial.println();
   Serial.println();
 }
 
@@ -161,10 +167,11 @@ void update_screen() {
   snprintf(screen_content, 20, "Depth: %s m", depth);
 
   // Update screen only if there has been a change
-  if(strcmp(screen_content, prev_screen_content) != 0) {
+  if(strcmp(screen_content, prev_screen_content) != 0 || millis() - last_screen_update > screen_update_interval_s*1000) {
     #if SCREEN_TYPE == 1
       update_lcd_screen();
     #endif
+    last_screen_update = millis();
   }
   strncpy(prev_screen_content, screen_content, 20);
 }
@@ -174,7 +181,7 @@ void update_screen() {
 // prev_screen_content is used to update screen only if there is a change (prevents blinking)
 void update_lcd_screen() {
   // clean up the screen before printing a new reply
-  lcd.clear();
+  // lcd.clear();
   // set the cursor to column 0, line 0
   lcd.setCursor(0, 0);
   // print line 1
@@ -184,8 +191,18 @@ void update_lcd_screen() {
 
 // Convert binary signal to depth string
 void convert_binary_signal_to_depth(char* input_signal_print) {
+  // Proper signal has 96 bits. If bits_read is different display no-signal string
+  if(bits_read != 96) {
+    strncpy(depth, no_signal, 5);
+    return;
+  }
+  
   // Read digits (left to right) from input signal
   byte pos = 0;
+  // If decimal point is not present add space to beginning to keep length of 4 chars
+  if(input_signal_print[bits_read-23] != '1') {
+    depth[pos++] = ' ';
+  }
   depth[pos++] = convert_7bits_to_char(&input_signal_print[bits_read-7]);
   depth[pos++] = convert_7bits_to_char(&input_signal_print[bits_read-14]);
   // Check if decimal point is present
