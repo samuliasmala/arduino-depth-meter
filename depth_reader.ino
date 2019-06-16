@@ -29,7 +29,7 @@ int unsuccessful_signal_reads = 0;
 char screen_content[20];
 char prev_screen_content[20];
 char depth[5];
-char prev_depth[5] = "--.-";
+char prev_depth[5];
 unsigned long last_screen_update;
 
 // Setup code, to run once in the beginning
@@ -43,6 +43,8 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(channel_1), read_pulse, RISING);
 
   initialize_screen();
+
+  strncpy(prev_depth, no_signal, 5);
 }
 
 
