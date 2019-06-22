@@ -28,7 +28,7 @@ const int max_wait_for_pulse_ms = 1000; // How long to wait for a pulse before d
 const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 3; // Channel for bit information at peak positions (brown)
-const bool use_serial_for_debugging = true;
+const bool use_serial_for_debugging = false;
 const int max_signal_read_retries = 3;
 const char no_signal[] = " -- ";
 
@@ -44,6 +44,7 @@ char prev_screen_content[20];
 char depth[5];
 char prev_depth[5];
 unsigned long last_screen_update;
+unsigned long last_full_screen_update;
 
 // Setup code, to run once in the beginning
 void setup()
@@ -195,6 +196,15 @@ void update_screen() {
     #endif
 
     #if SCREEN_TYPE == 2
+      // Check if full screen update required
+      if(millis() - last_full_screen_update > 60000) {
+        epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
+        epd.DisplayFrame();
+        last_full_screen_update = millis();
+        if(use_serial_for_debugging)
+          Serial.println("Full screen update done");
+      }
+      
       paint.SetWidth(32);
       paint.SetHeight(234);
       paint.SetRotate(ROTATE_90);
@@ -300,6 +310,8 @@ void initialize_screen() {
     epd.DisplayFrame();
     epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
     epd.DisplayFrame();
+
+    last_full_screen_update = millis();
   
     if (epd.Init(lut_partial_update) != 0) {
         Serial.print("e-Paper init failed");
