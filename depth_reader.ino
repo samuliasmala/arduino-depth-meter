@@ -1,11 +1,24 @@
 // SCREEN TYPES
 // 1 = Starter Kit LCD 
-#define SCREEN_TYPE 1
+#define SCREEN_TYPE 2
 
 #if SCREEN_TYPE == 1
   // Load lcd library and initialize with the numbers of the interface pins
   #include <LiquidCrystal.h>
   LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
+#endif
+
+#if SCREEN_TYPE == 2
+  #include <SPI.h>
+  #include <epd2in9.h>
+  #include <epdpaint.h>
+  
+  #define COLORED     0
+  #define UNCOLORED   1
+
+  unsigned char image[1024];
+  Paint paint(image, 0, 0);    // width should be the multiple of 8 
+  Epd epd;
 #endif
 
 // Constants
@@ -14,8 +27,8 @@ const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000; // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
-const int channel_2 = 13; // Channel for bit information at peak positions (brown)
-const bool use_serial_for_debugging = false;
+const int channel_2 = 3; // Channel for bit information at peak positions (brown)
+const bool use_serial_for_debugging = true;
 const int max_signal_read_retries = 3;
 const char no_signal[] = " -- ";
 
@@ -171,23 +184,29 @@ void update_screen() {
   // Update screen only if there has been a change
   if(strcmp(screen_content, prev_screen_content) != 0 || millis() - last_screen_update > screen_update_interval_s*1000) {
     #if SCREEN_TYPE == 1
-      update_lcd_screen();
+      // Update lcd screen with the value stored in depth variable
+      // prev_screen_content is used to update screen only if there is a change (prevents blinking)
+      // clean up the screen before printing a new reply
+      // lcd.clear();
+      // set the cursor to column 0, line 0
+      lcd.setCursor(0, 0);
+      // print line 1
+      lcd.print(screen_content);
+    #endif
+
+    #if SCREEN_TYPE == 2
+      paint.SetWidth(32);
+      paint.SetHeight(234);
+      paint.SetRotate(ROTATE_90);
+    
+      paint.Clear(UNCOLORED);
+      paint.DrawStringAt(0, 4, screen_content, &Font24, COLORED);
+      epd.SetFrameMemory(paint.GetImage(), 50, 10, paint.GetWidth(), paint.GetHeight());
+      epd.DisplayFrame();
     #endif
     last_screen_update = millis();
   }
   strncpy(prev_screen_content, screen_content, 20);
-}
-
-
-// Update lcd screen with the value stored in depth variable
-// prev_screen_content is used to update screen only if there is a change (prevents blinking)
-void update_lcd_screen() {
-  // clean up the screen before printing a new reply
-  // lcd.clear();
-  // set the cursor to column 0, line 0
-  lcd.setCursor(0, 0);
-  // print line 1
-  lcd.print(screen_content);
 }
 
 
@@ -263,5 +282,28 @@ void initialize_screen() {
   #if SCREEN_TYPE == 1
     // set up the number of columns and rows on the LCD
     lcd.begin(16, 2);
+  #endif
+
+  #if SCREEN_TYPE == 2
+    if (epd.Init(lut_full_update) != 0) {
+        Serial.print("e-Paper init failed");
+        return;
+    }
+  
+    /** 
+     *  there are 2 memory areas embedded in the e-paper display
+     *  and once the display is refreshed, the memory area will be auto-toggled,
+     *  i.e. the next action of SetFrameMemory will set the other memory area
+     *  therefore you have to clear the frame memory twice.
+     */
+    epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
+    epd.DisplayFrame();
+    epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
+    epd.DisplayFrame();
+  
+    if (epd.Init(lut_partial_update) != 0) {
+        Serial.print("e-Paper init failed");
+        return;
+    }
   #endif
 }
