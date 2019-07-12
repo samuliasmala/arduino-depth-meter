@@ -59,42 +59,34 @@ void setup()
   initialize_screen();
 
   strncpy(prev_depth, no_signal, 5);
+
+  // Reset variables for the next pulse
+  bits_read = 0;
+  last_interrupt_time = millis();
 }
 
 
 // Main loop, to run repeatedly
 void loop()
 {
-  // Reset variables for the next pulse
-  bits_read = 0;
-  last_interrupt_time = millis();
-
-  // Activate interrupts
-  interrupts();
-  
   // Wait until a single pulse is read, i.e. more than pulse_length_ms since
   // last interrupt
-  while( (bits_read == 0 || millis() - last_interrupt_time < pulse_length_ms)
-        && millis() - last_interrupt_time < max_wait_for_pulse_ms) {
+  while( bits_read < 96 && millis() - last_interrupt_time < max_wait_for_pulse_ms) {
     delay(pulse_length_ms);
   }
 
-  // Disable interrupts while updating screen and printing to serial
+  // Disable interrupts while reading depth from input_signal
   noInterrupts();
-
-  // Check that maximum bits allowed for pulse is not exceeded
-  if(bits_read >= max_pulse_bits) {
-    print_debugging_information(false);
-    return;
-  }
-
-  
+ 
   // The input signal read in the interrupt is stored in input_signal variable
   // Add end-of-string character
   input_signal[bits_read] = '\0';
   
   // Convert binary interrupt signal to depth string stored in depth variable
   convert_binary_signal_to_depth((char*)input_signal);
+
+  // Activate interrupts now depth is read
+  interrupts();
 
   print_debugging_information(true);
   
@@ -125,6 +117,10 @@ void loop()
 // Function used in the interrupt to convert signals to bits
 void read_pulse()
 {
+  // Check if start of a new signal - if yes, reset bits_read
+  if(millis() - last_interrupt_time > pulse_length_ms || bits_read > max_pulse_bits)
+    bits_read = 0;
+    
   if(digitalRead(channel_2) == HIGH) {
     input_signal[bits_read] = '1';
   } else {
