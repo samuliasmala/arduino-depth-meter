@@ -16,7 +16,7 @@
   #define COLORED     0
   #define UNCOLORED   1
 
-  unsigned char image[1024];
+  unsigned char image[864]; // Just enough for one 112pt letter (72*96=6912 pixels or bits => 6912/8 = 864 bytes)
   Paint paint(image, 0, 0);    // width should be the multiple of 8 
   Epd epd;
 #endif
