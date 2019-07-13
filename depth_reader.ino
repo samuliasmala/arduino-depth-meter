@@ -24,6 +24,7 @@
 
 // Constants
 const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
+const int max_partial_updates = 20;      // How many partial updates before full refresh
 const int pulse_length_ms = 10;          // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000;  // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 100;          // Maximum amount of bits allowed in the pulse
@@ -46,7 +47,7 @@ char prev_screen_content[20];
 char depth[5];
 char prev_depth[5];
 unsigned long last_screen_update;
-unsigned long last_full_screen_update;
+int n_partial_screen_updates_since_full_update = 0;
 
 // Setup code, to run once in the beginning
 void setup()
@@ -206,7 +207,7 @@ void update_screen() {
     #if SCREEN_TYPE == 2
       // Check if full screen update required
       bool full_update = false;
-      if(millis() - last_full_screen_update > 300000) {
+      if(n_partial_screen_updates_since_full_update >= max_partial_updates) {
         epd.SetLut(lut_full_update);
         epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
         full_update = true;
@@ -214,9 +215,10 @@ void update_screen() {
       
       DrawString(16, 4, screen_content, &CourierNew112, COLORED);
       epd.DisplayFrame();
+      n_partial_screen_updates_since_full_update++;
 
       if(full_update) {
-        last_full_screen_update = millis();
+        n_partial_screen_updates_since_full_update = 0;
         epd.SetLut(lut_partial_update);
         if(use_serial_for_debugging)
           Serial.println("Full screen update done");
@@ -340,8 +342,6 @@ void initialize_screen() {
     epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
     epd.DisplayFrame();
     epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-
-    last_full_screen_update = millis();
   
     if (epd.Init(lut_partial_update) != 0) {
         Serial.print("e-Paper init failed");
