@@ -86,12 +86,12 @@ void loop()
   // Convert binary interrupt signal to depth string stored in depth variable
   convert_binary_signal_to_depth((char*)input_signal);
 
-  print_debugging_information();
-
   // Activate interrupts now depth is read
   interrupts();
 
-  
+  print_debugging_information();
+  bits_read = 0;
+
   // Check if the signal is correct, if not then reread before updating the screen
   if(check_signal()) {
     unsuccessful_signal_reads = 0;
