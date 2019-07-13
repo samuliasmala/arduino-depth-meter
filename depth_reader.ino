@@ -30,7 +30,7 @@ const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 3; // Channel for bit information at peak positions (brown)
 const bool use_serial_for_debugging = false;
 const int max_signal_read_retries = 3;
-const char no_signal[] = " -- ";
+const char no_signal[] = "--- ";
 
 // Volatile variables used in the interrupt
 volatile unsigned int bits_read;
