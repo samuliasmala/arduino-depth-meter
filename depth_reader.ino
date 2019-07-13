@@ -1,5 +1,6 @@
 // SCREEN TYPES
 // 1 = Starter Kit LCD 
+// 2 = Waveshare eInk 2.9"
 #define SCREEN_TYPE 2
 
 #if SCREEN_TYPE == 1
@@ -17,17 +18,17 @@
   #define UNCOLORED   1
 
   unsigned char image[864]; // Just enough for one 112pt letter (72*96=6912 pixels or bits => 6912/8 = 864 bytes)
-  Paint paint(image, 0, 0);    // width should be the multiple of 8 
+  Paint paint(image, 0, 0); // width should be the multiple of 8 
   Epd epd;
 #endif
 
 // Constants
 const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
-const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
-const int max_wait_for_pulse_ms = 1000; // How long to wait for a pulse before displaying dashes
-const int max_pulse_bits = 100; // Maximum amount of bits allowed in the pulse
-const int channel_1 = 2; // Channel for peak positions (black)
-const int channel_2 = 3; // Channel for bit information at peak positions (brown)
+const int pulse_length_ms = 10;          // Pulse length 10 ms (pulses come every 350 ms)
+const int max_wait_for_pulse_ms = 1000;  // How long to wait for a pulse before displaying dashes
+const int max_pulse_bits = 100;          // Maximum amount of bits allowed in the pulse
+const int channel_1 = 2;                 // Channel for peak positions (black)
+const int channel_2 = 3;                 // Channel for bit information at peak positions (brown)
 const bool use_serial_for_debugging = false;
 const int max_signal_read_retries = 3;
 const char no_signal[] = " ---";
