@@ -85,10 +85,11 @@ void loop()
   // Convert binary interrupt signal to depth string stored in depth variable
   convert_binary_signal_to_depth((char*)input_signal);
 
+  print_debugging_information();
+
   // Activate interrupts now depth is read
   interrupts();
 
-  print_debugging_information(true);
   
   // Check if the signal is correct, if not then reread before updating the screen
   if(check_signal()) {
@@ -132,17 +133,13 @@ void read_pulse()
 }
 
 
-void print_debugging_information(bool print_all) {
+void print_debugging_information() {
   // Print debugging information only if enabled
   if(!use_serial_for_debugging)
     return;
 
   Serial.print("Number of bits in the pulse: ");
   Serial.println(bits_read);
-
-  if(!print_all)
-    return;
-
   Serial.print("Bits: ");
   Serial.println((char*)input_signal);
   Serial.print("Depth: '");
