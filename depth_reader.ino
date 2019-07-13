@@ -39,6 +39,7 @@ volatile unsigned long last_interrupt_time;
 
 // Global variables (arrays defined here to speed up the code)
 int unsuccessful_signal_reads = 0;
+bool last_time_too_fast_depth_change = false;
 char screen_content[20];
 char prev_screen_content[20];
 char depth[5];
@@ -94,6 +95,19 @@ void loop()
   // Check if the signal is correct, if not then reread before updating the screen
   if(check_signal()) {
     unsuccessful_signal_reads = 0;
+
+    // Check whether the depth change was too quick (usually indicating incorrect decimal point bit)
+    // If the depth change was checked for the previous depth value then skip because then the change
+    // may be real
+    if(last_time_too_fast_depth_change == true || too_fast_depth_change() == false) {
+      // Depth change is not too fast, reset boolean indicator
+      last_time_too_fast_depth_change = false;
+    } else {
+      // The depth change was too fast
+      // Rise the flag and use previous depth value
+      last_time_too_fast_depth_change = true;
+      strncpy(depth, prev_depth, 5);
+    }
   } else {
     unsuccessful_signal_reads++;
     
@@ -106,9 +120,8 @@ void loop()
     }
   }
 
-  // Update lcd with the value stored in depth variable if depth change is not too quick
-  if(!too_fast_depth_change())
-    update_screen();
+  // Update lcd with the value stored in depth variable
+  update_screen();
   
   // Save depth variable so in case of unsuccessful signal read previous value can be displayed
   strncpy(prev_depth, depth, 5);
