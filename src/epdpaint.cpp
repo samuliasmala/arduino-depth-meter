@@ -144,7 +144,16 @@ void Paint::DrawPixel(int x, int y, int colored) {
  */
 void Paint::DrawCharAt(int x, int y, char ascii_char, sFONT* font, int colored) {
     int i, j;
-    unsigned int char_offset = (ascii_char - ' ') * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
+    char offset;
+    
+    // If font size is bigger than Font24 then the font doesn't include all
+    // characters and custom offset calculation must be used
+    if(font->Height > 24) {
+      offset = CalculateCustomOffset(ascii_char, font);
+    } else {
+      offset = ascii_char - ' ';
+    }
+    unsigned int char_offset = offset * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
     const unsigned char* ptr = &font->table[char_offset];
 
     for (j = 0; j < font->Height; j++) {
@@ -160,6 +169,16 @@ void Paint::DrawCharAt(int x, int y, char ascii_char, sFONT* font, int colored) 
             ptr++;
         }
     }
+}
+
+char Paint::CalculateCustomOffset(char ascii_char, sFONT* font) {
+  // If font is CourierNew112
+  if(font->Height == 96) {
+    if(ascii_char == '-') return 0;
+    if(ascii_char == '.') return 1;
+    if(ascii_char >= '0' && ascii_char <= '9') return ascii_char - '0' + 2;
+    return 12; // Return ' ' if not matching chars above
+  }
 }
 
 /**

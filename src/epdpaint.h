@@ -63,6 +63,7 @@ public:
     void DrawFilledCircle(int x, int y, int radius, int colored);
 
 private:
+    char Paint::CalculateCustomOffset(char ascii_char, sFONT* font);
     unsigned char* image;
     int width;
     int height;
