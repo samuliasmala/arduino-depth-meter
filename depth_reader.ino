@@ -176,7 +176,8 @@ bool too_fast_depth_change() {
 
 
 void update_screen() {
-  snprintf(screen_content, 20, "Depth: %s m", depth);
+  //snprintf(screen_content, 20, "%s", depth);
+  strncpy(screen_content, depth, 5);
 
   // Update screen only if there has been a change
   if(strcmp(screen_content, prev_screen_content) != 0 || millis() - last_screen_update > screen_update_interval_s*1000) {
@@ -201,13 +202,7 @@ void update_screen() {
         full_update = true;
       }
       
-      paint.SetWidth(32);
-      paint.SetHeight(234);
-      paint.SetRotate(ROTATE_90);
-    
-      paint.Clear(UNCOLORED);
-      paint.DrawStringAt(0, 4, screen_content, &Font24, COLORED);
-      epd.SetFrameMemory(paint.GetImage(), 50, 10, paint.GetWidth(), paint.GetHeight());
+      DrawString(16, 4, screen_content, &CourierNew112, COLORED);
       epd.DisplayFrame();
 
       if(full_update) {
@@ -223,6 +218,28 @@ void update_screen() {
   strncpy(prev_screen_content, screen_content, 20);
 }
 
+
+void DrawString(int x, int y, const char* text, sFONT* font, int colored) {
+    const char* p_text = text;
+    unsigned int counter = 0;
+    int refcolumn = x;
+
+    // Initialize paint area
+    paint.SetWidth(font->Height);
+    paint.SetHeight(font->Width);
+    paint.SetRotate(ROTATE_90);
+
+/* Send the string character by character on EPD */
+    while (*p_text != 0) {
+      paint.Clear(UNCOLORED);
+      paint.DrawCharAt(0, 0, *p_text, font, colored);
+      epd.SetFrameMemory(paint.GetImage(), x, y+font->Width*counter, paint.GetWidth(), paint.GetHeight());
+
+      /* Point on the next character */
+      p_text++;
+      counter++;
+    }
+}
 
 // Convert binary signal to depth string
 void convert_binary_signal_to_depth(char* input_signal_print) {
