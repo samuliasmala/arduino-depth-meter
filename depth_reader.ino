@@ -10,8 +10,8 @@
 
 #if SCREEN_TYPE == 2
   #include <SPI.h>
-  #include <epd2in9.h>
-  #include <epdpaint.h>
+  #include "src\epd2in9.h"
+  #include "src\epdpaint.h"
   
   #define COLORED     0
   #define UNCOLORED   1
