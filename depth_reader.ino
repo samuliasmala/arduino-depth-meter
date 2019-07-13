@@ -25,12 +25,12 @@
 const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
 const int pulse_length_ms = 10; // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000; // How long to wait for a pulse before displaying dashes
-const int max_pulse_bits = 127; // Maximum amount of bits allowed in the pulse
+const int max_pulse_bits = 100; // Maximum amount of bits allowed in the pulse
 const int channel_1 = 2; // Channel for peak positions (black)
 const int channel_2 = 3; // Channel for bit information at peak positions (brown)
 const bool use_serial_for_debugging = false;
 const int max_signal_read_retries = 3;
-const char no_signal[] = "--- ";
+const char no_signal[] = " ---";
 
 // Volatile variables used in the interrupt
 volatile unsigned int bits_read;
@@ -165,7 +165,7 @@ void print_debugging_information() {
 
 // Check depth value correctness
 bool check_signal() {
-  if(strcmp(depth, "   ") == 0)
+  if(strcmp(depth, "    ") == 0)
     return false;
 
   if(depth[0] == '-' || depth[1] == '-'  || depth[2] == '-'  || depth[3] == '-' )
@@ -205,7 +205,6 @@ void update_screen() {
     #if SCREEN_TYPE == 2
       // Check if full screen update required
       bool full_update = false;
-      Serial.println(millis() - last_full_screen_update);
       if(millis() - last_full_screen_update > 300000) {
         epd.SetLut(lut_full_update);
         epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
