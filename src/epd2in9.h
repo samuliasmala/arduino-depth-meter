@@ -82,6 +82,7 @@ public:
     void ClearFrameMemory(unsigned char color);
     void DisplayFrame(void);
     void Sleep(void);
+    void SetLut(const unsigned char* lut);
 
 private:
     unsigned int reset_pin;
@@ -90,7 +91,6 @@ private:
     unsigned int busy_pin;
     const unsigned char* lut;
 
-    void SetLut(const unsigned char* lut);
     void SetMemoryArea(int x_start, int y_start, int x_end, int y_end);
     void SetMemoryPointer(int x, int y);
 };
