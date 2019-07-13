@@ -193,12 +193,12 @@ void update_screen() {
 
     #if SCREEN_TYPE == 2
       // Check if full screen update required
-      if(millis() - last_full_screen_update > 60000) {
+      bool full_update = false;
+      Serial.println(millis() - last_full_screen_update);
+      if(millis() - last_full_screen_update > 300000) {
+        epd.SetLut(lut_full_update);
         epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-        epd.DisplayFrame();
-        last_full_screen_update = millis();
-        if(use_serial_for_debugging)
-          Serial.println("Full screen update done");
+        full_update = true;
       }
       
       paint.SetWidth(32);
@@ -209,6 +209,14 @@ void update_screen() {
       paint.DrawStringAt(0, 4, screen_content, &Font24, COLORED);
       epd.SetFrameMemory(paint.GetImage(), 50, 10, paint.GetWidth(), paint.GetHeight());
       epd.DisplayFrame();
+
+      if(full_update) {
+        last_full_screen_update = millis();
+        epd.SetLut(lut_partial_update);
+        if(use_serial_for_debugging)
+          Serial.println("Full screen update done");
+      }
+
     #endif
     last_screen_update = millis();
   }
@@ -305,7 +313,6 @@ void initialize_screen() {
     epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
     epd.DisplayFrame();
     epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-    epd.DisplayFrame();
 
     last_full_screen_update = millis();
   
