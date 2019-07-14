@@ -4,22 +4,13 @@
 #define SCREEN_TYPE 2
 
 #if SCREEN_TYPE == 1
-  // Load lcd library and initialize with the numbers of the interface pins
-  #include <LiquidCrystal.h>
-  LiquidCrystal lcd(10, 3, 7, 6, 5, 4);
+  #include "screen-lcd.h"
+  Screen_lcd screen;
 #endif
 
 #if SCREEN_TYPE == 2
-  #include <SPI.h>
-  #include "src\epd2in9.h"
-  #include "src\epdpaint.h"
-  
-  #define COLORED     0
-  #define UNCOLORED   1
-
-  unsigned char image[864]; // Just enough for one 112pt letter (72*96=6912 pixels or bits => 6912/8 = 864 bytes)
-  Paint paint(image, 0, 0); // width should be the multiple of 8 
-  Epd epd;
+  #include "screen-eink.h"
+  Screen screen;
 #endif
 
 // Constants
@@ -42,12 +33,8 @@ volatile unsigned long last_interrupt_time;
 // Global variables (arrays defined here to speed up the code)
 int unsuccessful_signal_reads = 0;
 bool last_time_too_fast_depth_change = false;
-char screen_content[20];
-char prev_screen_content[20];
 char depth[5];
 char prev_depth[5];
-unsigned long last_screen_update;
-int n_partial_screen_updates_since_full_update = 0;
 
 // Setup code, to run once in the beginning
 void setup()
@@ -59,7 +46,7 @@ void setup()
   pinMode(channel_2, INPUT);
   attachInterrupt(digitalPinToInterrupt(channel_1), read_pulse, RISING);
 
-  initialize_screen();
+  screen.init_screen();
 
   strncpy(prev_depth, no_signal, 5);
 
@@ -123,7 +110,7 @@ void loop()
   }
 
   // Update lcd with the value stored in depth variable
-  update_screen();
+  screen.update_screen(depth);
   
   // Save depth variable so in case of unsuccessful signal read previous value can be displayed
   strncpy(prev_depth, depth, 5);
@@ -187,71 +174,7 @@ bool too_fast_depth_change() {
 }
 
 
-void update_screen() {
-  //snprintf(screen_content, 20, "%s", depth);
-  strncpy(screen_content, depth, 5);
 
-  // Update screen only if there has been a change
-  if(strcmp(screen_content, prev_screen_content) != 0 || millis() - last_screen_update > screen_update_interval_s*1000) {
-    #if SCREEN_TYPE == 1
-      // Update lcd screen with the value stored in depth variable
-      // prev_screen_content is used to update screen only if there is a change (prevents blinking)
-      // clean up the screen before printing a new reply
-      // lcd.clear();
-      // set the cursor to column 0, line 0
-      lcd.setCursor(0, 0);
-      // print line 1
-      lcd.print(screen_content);
-    #endif
-
-    #if SCREEN_TYPE == 2
-      // Check if full screen update required
-      bool full_update = false;
-      if(n_partial_screen_updates_since_full_update >= max_partial_updates) {
-        epd.SetLut(lut_full_update);
-        epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-        full_update = true;
-      }
-      
-      DrawString(16, 4, screen_content, &CourierNew112, COLORED);
-      epd.DisplayFrame();
-      n_partial_screen_updates_since_full_update++;
-
-      if(full_update) {
-        n_partial_screen_updates_since_full_update = 0;
-        epd.SetLut(lut_partial_update);
-        if(use_serial_for_debugging)
-          Serial.println("Full screen update done");
-      }
-
-    #endif
-    last_screen_update = millis();
-  }
-  strncpy(prev_screen_content, screen_content, 20);
-}
-
-
-void DrawString(int x, int y, const char* text, sFONT* font, int colored) {
-    const char* p_text = text;
-    unsigned int counter = 0;
-    int refcolumn = x;
-
-    // Initialize paint area
-    paint.SetWidth(font->Height);
-    paint.SetHeight(font->Width);
-    paint.SetRotate(ROTATE_90);
-
-/* Send the string character by character on EPD */
-    while (*p_text != 0) {
-      paint.Clear(UNCOLORED);
-      paint.DrawCharAt(0, 0, *p_text, font, colored);
-      epd.SetFrameMemory(paint.GetImage(), x, y+font->Width*counter, paint.GetWidth(), paint.GetHeight());
-
-      /* Point on the next character */
-      p_text++;
-      counter++;
-    }
-}
 
 // Convert binary signal to depth string
 void convert_binary_signal_to_depth(char* input_signal_print) {
@@ -318,34 +241,4 @@ char convert_byte_to_char(byte depth) {
   } else {
     return '-';
   }
-}
-
-
-void initialize_screen() {
-  #if SCREEN_TYPE == 1
-    // set up the number of columns and rows on the LCD
-    lcd.begin(16, 2);
-  #endif
-
-  #if SCREEN_TYPE == 2
-    if (epd.Init(lut_full_update) != 0) {
-        Serial.print("e-Paper init failed");
-        return;
-    }
-  
-    /** 
-     *  there are 2 memory areas embedded in the e-paper display
-     *  and once the display is refreshed, the memory area will be auto-toggled,
-     *  i.e. the next action of SetFrameMemory will set the other memory area
-     *  therefore you have to clear the frame memory twice.
-     */
-    epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-    epd.DisplayFrame();
-    epd.ClearFrameMemory(0xFF);   // bit set = white, bit reset = black
-  
-    if (epd.Init(lut_partial_update) != 0) {
-        Serial.print("e-Paper init failed");
-        return;
-    }
-  #endif
 }
