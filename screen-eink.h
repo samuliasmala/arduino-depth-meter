@@ -12,6 +12,7 @@
 extern const int screen_update_interval_s;
 extern const int max_partial_updates;
 extern const bool use_serial_for_debugging;
+extern const bool display_debugging_on_screen;
 
 
 class Screen {
@@ -28,8 +29,10 @@ private:
   Epd epd;
   char screen_content[5];
   char prev_screen_content[5];
+  char screen_debug[50];
   unsigned long last_screen_update;
   int n_partial_screen_updates_since_full_update = 0;
+  int total_screen_updates = 0;
 };
 
 #endif

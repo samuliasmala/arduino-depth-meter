@@ -42,6 +42,9 @@ void Screen::update_screen(char* depth) {
 
   // Update screen only if there has been a change or the screen update interval has passed
   if(strcmp(screen_content, prev_screen_content) != 0 || millis() - last_screen_update > screen_update_interval_s*1000) {
+    total_screen_updates++;
+    n_partial_screen_updates_since_full_update++;
+    
     // Check if full screen update required
     bool full_update = false;
     if(n_partial_screen_updates_since_full_update >= max_partial_updates) {
@@ -50,9 +53,15 @@ void Screen::update_screen(char* depth) {
       full_update = true;
     }
     
+    if(display_debugging_on_screen) {      
+      snprintf(screen_debug, 50, "Screen updates: %-5d", total_screen_updates);
+      this->DrawString(116, 0, screen_debug, &Font12, COLORED);
+      snprintf(screen_debug, 50, "Until refresh: %-5d", max_partial_updates-n_partial_screen_updates_since_full_update);
+      this->DrawString(116, 160, screen_debug, &Font12, COLORED);
+    }
+    
     this->DrawString(16, 4, screen_content, &CourierNew112, COLORED);
     epd.DisplayFrame();
-    n_partial_screen_updates_since_full_update++;
 
     if(full_update) {
       n_partial_screen_updates_since_full_update = 0;
