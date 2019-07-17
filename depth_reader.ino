@@ -21,8 +21,8 @@ const int max_partial_updates = 20;      // How many partial updates before full
 const int pulse_length_ms = 10;          // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000;  // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 100;          // Maximum amount of bits allowed in the pulse
-const int channel_1 = 2;                 // Channel for peak positions (black)
-const int channel_2 = 3;                 // Channel for bit information at peak positions (brown)
+const int input_pin_for_bit_position = 2;// Input pin for peak positions (black wire)
+const int input_pin_for_bit_value = 3;   // Input pin for bit information at peak positions (brown wire)
 const bool use_serial_for_debugging = false;
 const bool display_debugging_on_screen = true;
 const int max_signal_read_retries = 3;
@@ -42,9 +42,9 @@ void setup()
   if(use_serial_for_debugging)
     Serial.begin(9600);
 
-  pinMode(channel_1, INPUT);
-  pinMode(channel_2, INPUT);
-  attachInterrupt(digitalPinToInterrupt(channel_1), read_pulse, RISING);
+  pinMode(input_pin_for_bit_position, INPUT);
+  pinMode(input_pin_for_bit_value, INPUT);
+  attachInterrupt(digitalPinToInterrupt(input_pin_for_bit_position), read_pulse, RISING);
 
   screen.init_screen();
 
@@ -96,7 +96,7 @@ void read_pulse()
   if(millis() - last_interrupt_time > pulse_length_ms || bits_read > max_pulse_bits)
     bits_read = 0;
     
-  if(digitalRead(channel_2) == HIGH) {
+  if(digitalRead(input_pin_for_bit_value) == HIGH) {
     input_signal[bits_read] = '1';
   } else {
     input_signal[bits_read] = '0';
