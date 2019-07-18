@@ -60,7 +60,7 @@ void Screen::update_screen(char* depth) {
       this->DrawString(116, 160, screen_debug, &Font12, COLORED);
     }
     
-    this->DrawString(16, 4, screen_content, &CourierNew112, COLORED);
+    this->DrawString(16, 4, screen_content, &CourierNew112Bold, COLORED);
     epd.DisplayFrame();
 
     if(full_update) {

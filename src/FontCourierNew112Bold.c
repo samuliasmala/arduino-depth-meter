@@ -8,8 +8,8 @@
 //  http://www.eran.io/the-dot-factory-an-lcd-font-and-image-generator/
 //
 
-// Character bitmaps for Courier New 112pt
-const uint8_t CourierNew_112pt_Table [] PROGMEM = 
+// Character bitmaps for Courier New 112pt Bold
+const uint8_t CourierNew_112pt_Bold_Table [] PROGMEM = 
 {  
 	// @0 '-' (72 pixels wide)
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //                                                                         
@@ -1287,8 +1287,8 @@ const uint8_t CourierNew_112pt_Table [] PROGMEM =
 };
 
 
-sFONT CourierNew112 = {
-  CourierNew_112pt_Table,
+sFONT CourierNew112Bold = {
+  CourierNew_112pt_Bold_Table,
   72,  /* Width */
   96, /* Height */
 };
