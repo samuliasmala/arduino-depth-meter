@@ -1287,7 +1287,7 @@ const uint8_t CourierNew_112pt_Bold_Table [] PROGMEM =
 };
 
 
-sFONT CourierNew112Bold = {
+sFONT CourierNew96Bold = {
   CourierNew_112pt_Bold_Table,
   72,  /* Width */
   96, /* Height */
