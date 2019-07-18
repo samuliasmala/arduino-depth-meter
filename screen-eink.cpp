@@ -96,7 +96,8 @@ void Screen::DrawString(int x, int y, const char* text, sFONT* font, int colored
 /* Send the string character by character on EPD */
     while (*p_text != 0) {
       paint.Clear(UNCOLORED);
-      paint.DrawCharAt(0, x%8, *p_text, font, colored);
+      // Substract coordinate from 8 to compensate extra +8 in paint.SetWidth above
+      paint.DrawCharAt(0, 8 - x%8, *p_text, font, colored);
       /* 1 byte = 8 pixels, so the x should be the multiple of 8. Sub-8 changes must be included in DrawCharAt coordinates*/
       epd.SetFrameMemory(paint.GetImage(), x - x%8, y+font->Width*counter, paint.GetWidth(), paint.GetHeight());
 
