@@ -59,6 +59,7 @@ typedef struct _tFont
   
 } sFONT;
 
+extern sFONT DroidSansMono88;
 extern sFONT CourierNew112Bold;
 extern sFONT Font24;
 extern sFONT Font20;

@@ -146,13 +146,9 @@ void Paint::DrawCharAt(int x, int y, char ascii_char, sFONT* font, int colored) 
     int i, j;
     char offset;
     
-    // If font size is bigger than Font24 then the font doesn't include all
-    // characters and custom offset calculation must be used
-    if(font->Height > 24) {
-      offset = CalculateCustomOffset(ascii_char, font);
-    } else {
-      offset = ascii_char - ' ';
-    }
+    // Some new fonts don't include all characters and custom offset calculation must be used
+    offset = CalculateCustomOffset(ascii_char, font);
+
     unsigned int char_offset = offset * font->Height * (font->Width / 8 + (font->Width % 8 ? 1 : 0));
     const unsigned char* ptr = &font->table[char_offset];
 
@@ -172,13 +168,25 @@ void Paint::DrawCharAt(int x, int y, char ascii_char, sFONT* font, int colored) 
 }
 
 char Paint::CalculateCustomOffset(char ascii_char, sFONT* font) {
-  // If font is CourierNew112
+  // If font is CourierNew112Bold which has 0-9,- and space in the end
   if(font->Height == 96) {
     if(ascii_char == '-') return 0;
     if(ascii_char == '.') return 1;
     if(ascii_char >= '0' && ascii_char <= '9') return ascii_char - '0' + 2;
     return 12; // Return ' ' if not matching chars above
   }
+  
+  // If font is DroidSansMono88 which has 0-9,- and space in the beginning
+  if(font->Height == 88) {
+    if(ascii_char == ' ') return 0;
+    if(ascii_char == '-') return 1;
+    if(ascii_char == '.') return 2;
+    if(ascii_char >= '0' && ascii_char <= '9') return ascii_char - '0' + 3;
+    return 0; // Return ' ' if not matching chars above
+  }
+  
+  // For standard fonnts with all characters
+  return ascii_char - ' ';
 }
 
 /**
