@@ -24,7 +24,10 @@ public:
   
 private:
   void DrawString(int x, int y, const char* text, sFONT* font, int colored);
-  unsigned char image[864]; // Just enough for one 112pt letter (72*96=6912 pixels or bits => 6912/8 = 864 bytes)
+  // Just enough for one 112pt letter (72*(96+8)=7488 pixels or bits => 7488/8 = 936 bytes)
+  // +8 in above comes from epd.SetFrameMemory where x coordinate must be multiple of 8 which
+  // means movements under that must be done in paint canvas
+  unsigned char image[936];
   Paint paint;
   Epd epd;
   char screen_content[5];

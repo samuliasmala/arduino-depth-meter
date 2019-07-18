@@ -1,7 +1,7 @@
 #include "screen-eink.h"
 
 Screen::Screen() :
-  paint(image, 0, 0) // width should be the multiple of 8 
+  paint(image, 0, 0)
 {
 }
 
@@ -60,7 +60,7 @@ void Screen::update_screen(char* depth) {
       this->DrawString(116, 160, screen_debug, &Font12, COLORED);
     }
     
-    this->DrawString(16, 4, screen_content, &CourierNew112Bold, COLORED);
+    this->DrawString(20, 26, screen_content, &DroidSansMono88, COLORED);
     epd.DisplayFrame();
 
     if(full_update) {
@@ -80,18 +80,20 @@ void Screen::update_screen(char* depth) {
 void Screen::DrawString(int x, int y, const char* text, sFONT* font, int colored) {
     const char* p_text = text;
     unsigned int counter = 0;
-    int refcolumn = x;
 
     // Initialize paint area
-    paint.SetWidth(font->Height);
+    // 1 byte = 8 pixels, so this should be the multiple of 8
+    // Sub-8 changes must be included in canvas coordinates so +8 required
+    paint.SetWidth(font->Height + 8);
     paint.SetHeight(font->Width);
     paint.SetRotate(ROTATE_90);
 
 /* Send the string character by character on EPD */
     while (*p_text != 0) {
       paint.Clear(UNCOLORED);
-      paint.DrawCharAt(0, 0, *p_text, font, colored);
-      epd.SetFrameMemory(paint.GetImage(), x, y+font->Width*counter, paint.GetWidth(), paint.GetHeight());
+      paint.DrawCharAt(0, x%8, *p_text, font, colored);
+      /* 1 byte = 8 pixels, so the x should be the multiple of 8. Sub-8 changes must be included in DrawCharAt coordinates*/
+      epd.SetFrameMemory(paint.GetImage(), x - x%8, y+font->Width*counter, paint.GetWidth(), paint.GetHeight());
 
       /* Point on the next character */
       p_text++;
