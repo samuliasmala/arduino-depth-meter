@@ -11,6 +11,7 @@
 #if SCREEN_TYPE == 2
   #include "screen-eink.h"
   Screen screen;
+  const sFONT eink_font = DroidSansMono88;
 #endif
 
 #include "signal.h"

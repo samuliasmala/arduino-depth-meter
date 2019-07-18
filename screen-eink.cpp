@@ -59,8 +59,13 @@ void Screen::update_screen(char* depth) {
       snprintf(screen_debug, 50, "Until refresh: %-5d", max_partial_updates-n_partial_screen_updates_since_full_update);
       this->DrawString(116, 160, screen_debug, &Font12, COLORED);
     }
-    
-    this->DrawString(20, 26, screen_content, &DroidSansMono88, COLORED);
+
+    // Draw screen content to middle of screen
+    // (widths and heights mixed because of screen rotation)
+    int x = (EPD_WIDTH - eink_font.Height)/2;
+    int y = (EPD_HEIGHT - strlen(screen_content)*eink_font.Width)/2;
+
+    this->DrawString(x, y, screen_content, &eink_font, COLORED);
     epd.DisplayFrame();
 
     if(full_update) {

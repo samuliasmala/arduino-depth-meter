@@ -9,6 +9,7 @@
 #define UNCOLORED   1
 
 // Import constants
+extern const sFONT eink_font;
 extern const int screen_update_interval_s;
 extern const int max_partial_updates;
 extern const bool use_serial_for_debugging;
