@@ -17,15 +17,15 @@
 
 // Constants
 const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
-const int max_partial_updates = 20;      // How many partial updates before full refresh
+const int max_partial_updates = 40;      // How many partial updates before full refresh
 const int pulse_length_ms = 10;          // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000;  // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 100;          // Maximum amount of bits allowed in the pulse
 const int input_pin_for_bit_position = 2;// Input pin for peak positions (black wire)
 const int input_pin_for_bit_value = 3;   // Input pin for bit information at peak positions (brown wire)
 const bool use_serial_for_debugging = false;
-const bool display_debugging_on_screen = true;
-const int max_signal_read_retries = 3;
+const bool display_debugging_on_screen = false;
+const int max_signal_read_retries = 5;
 const char no_signal[] = " ---";
 
 // Volatile variables used in the interrupt
