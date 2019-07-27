@@ -19,7 +19,7 @@
 
 // Constants
 const int screen_update_interval_s = 60; // How often update the screen even if the content has not changed
-const int max_partial_updates = 40;      // How many partial updates before full refresh
+const int max_partial_updates = 60;      // How many partial updates before full refresh
 const int pulse_length_ms = 10;          // Pulse length 10 ms (pulses come every 350 ms)
 const int max_wait_for_pulse_ms = 1000;  // How long to wait for a pulse before displaying dashes
 const int max_pulse_bits = 100;          // Maximum amount of bits allowed in the pulse
